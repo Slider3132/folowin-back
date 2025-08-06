@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:latest
+    container_name: folowin-postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: $DB_USER
+      POSTGRES_PASSWORD: $DB_PASSWORD
+      POSTGRES_DB: $DB_NAME
+    ports:
+      - '5432:5432'
+    networks:
+      - folowin
+
+  adminer:
+    image: adminer
+    container_name: folowin-adminer
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    ports:
+      - '8080:8080'
+    networks:
+      - folowin
+    depends_on:
+      - db
+
+networks:
+  folowin:
+
+volumes:
+  pgdata:
+  public:
