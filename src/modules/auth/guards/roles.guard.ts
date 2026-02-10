@@ -31,29 +31,32 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
-    const req = context.switchToHttp().getRequest();
-    const authHeader = req.headers.authorization;
-    const bearer = authHeader?.split(' ')[0];
-    const token = authHeader?.split(' ')[1];
+    const { user } = context.switchToHttp().getRequest();
 
-    if (bearer !== 'Bearer' || !token) {
-      throw new UnauthorizedException();
-    }
-
-    let user: any = null;
-    let role: string | null = null;
+    let roles: (string | number)[] = [];
 
     try {
-      user = this.jwtService.verify(token, {
-        secret: this.configService.get('JWT_SECRET'),
-      });
-
-      role = user.roles[0];
+      const rawRoles = user?.roles;
+      roles = Array.isArray(rawRoles)
+        ? rawRoles
+        : typeof rawRoles === 'string'
+          ? [rawRoles]
+          : rawRoles != null
+            ? [String(rawRoles)]
+            : [];
     } catch (e) {
       throw new UnauthorizedException(e.message);
     }
 
-    if (user && !requiredRoles.includes(role)) {
+    const requiredList = Array.isArray(requiredRoles)
+      ? requiredRoles
+      : [requiredRoles];
+    const normalizedUserRoles = roles.map((r) => String(r));
+    const hasAnyRole = requiredList.some((r: any) =>
+      normalizedUserRoles.includes(String(r)),
+    );
+
+    if (user && !hasAnyRole) {
       throw new ForbiddenException();
     }
 

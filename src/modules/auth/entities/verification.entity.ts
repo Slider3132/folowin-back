@@ -37,5 +37,5 @@ export class VerificationCode extends BaseEntity {
 
   @ManyToOne(() => User, { onDelete: 'CASCADE', eager: true })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user: User | null;
 }

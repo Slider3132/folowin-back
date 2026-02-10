@@ -14,23 +14,17 @@ import { GoogleAuthDto } from './dto/google-auth.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { VerificationCode } from './entities/verification.entity';
 import { AuthResponseType } from './types/auth-response.type';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
-    @InjectRepository(VerificationCode)
     private readonly configService: ConfigService,
     private readonly jwtService: JwtService,
   ) {}
 
-  async register({
-    email,
-    role,
-    ...dto
-  }: RegisterDto): Promise<AuthResponseType> {
+  async register({ email, ...dto }: RegisterDto): Promise<AuthResponseType> {
     const existsUser = await this.userRepository.findOne({
       where: { email },
       withDeleted: true,
@@ -40,10 +34,15 @@ export class AuthService {
       throw new UnauthorizedException('User already exists');
     }
 
+    const hashedPassword = dto.password
+      ? await hash(dto.password, await genSalt(10))
+      : undefined;
+
     const user = await this.userRepository.save({
       email,
-      roles: [role],
+      roles: [RolesEnum.guest],
       ...dto,
+      password: hashedPassword,
     });
 
     return { ...(await this.generateTokens(user)) };
@@ -102,19 +101,22 @@ export class AuthService {
   }
 
   async refresh(refreshToken: string): Promise<AuthResponseType> {
-    const { id }: any = await this.jwtService.verifyAsync(refreshToken, {
-      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-    });
+    try {
+      const { id }: any = await this.jwtService.verifyAsync(refreshToken, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      });
+      const user = await this.userRepository.findOne({
+        where: { id },
+      });
 
-    const user = await this.userRepository.findOne({
-      where: { id },
-    });
+      if (!user) {
+        throw new UnauthorizedException('Invalid credentials');
+      }
 
-    if (!user) {
+      return { ...(await this.generateTokens(user)) };
+    } catch (error) {
       throw new UnauthorizedException('Invalid credentials');
     }
-
-    return { ...(await this.generateTokens(user)) };
   }
 
   async changePassword(
@@ -125,16 +127,16 @@ export class AuthService {
       where: { id: user.id },
     });
 
-    if (!(await compare(currentPassword, existUser.password))) {
-      throw new UnauthorizedException('Invalid credentials');
+    if (!existUser) {
+      throw new UnauthorizedException('User not found');
     }
 
-    await this.userRepository.save({
-      id: user.id,
-      password: await hash(password, await genSalt(10)),
-    });
+    if (!(await compare(currentPassword, existUser.password))) {
+      throw new UnauthorizedException('Invalid current password');
+    }
 
-    return existUser;
+    existUser.password = await hash(password, await genSalt(10));
+    return this.userRepository.save(existUser);
   }
 
   async resetPassword({
