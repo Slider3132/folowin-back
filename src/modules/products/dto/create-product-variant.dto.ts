@@ -1,15 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
-  IsArray,
-  IsEnum,
-  IsNotEmpty,
-  IsNumber,
-  IsObject,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Min,
+    IsArray,
+    IsEnum,
+    IsNotEmpty,
+    IsNumber,
+    IsObject,
+    IsOptional,
+    IsString,
+    IsUUID,
+    Min,
 } from 'class-validator';
 import { Unit } from '../enums/unit.enum';
 
@@ -22,6 +22,12 @@ export class CreateProductVariantDto {
   @IsString()
   @IsNotEmpty()
   name: string;
+
+  @ApiProperty({ example: 10, description: 'Кількість на складі' })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  stock?: number;
 
   @ApiProperty({ example: 'SKU-TOM-1L' })
   @IsString()

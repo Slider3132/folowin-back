@@ -2,12 +2,12 @@ import { BaseEntity } from '@/common/entities/base.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Media } from 'src/modules/media/entities/media.entity';
 import {
-  Column,
-  Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
-  OneToMany,
+    Column,
+    Entity,
+    Index,
+    JoinColumn,
+    ManyToOne,
+    OneToMany,
 } from 'typeorm';
 import { Unit } from '../enums/unit.enum';
 import { Product } from './product.entity';
@@ -35,6 +35,10 @@ export class ProductVariant extends BaseEntity {
   @ApiProperty()
   @Column()
   name: string;
+
+  @ApiProperty()
+  @Column({ default: 0 })
+  stock: number;
 
   @ApiProperty({ description: 'SKU варианта (уникален в рамках productId)' })
   @Column({ nullable: true })

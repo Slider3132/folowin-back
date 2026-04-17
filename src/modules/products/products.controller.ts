@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiTags, OmitType } from '@nestjs/swagger';
 import { CreateProductVariantDto } from './dto/create-product-variant.dto';
@@ -17,6 +18,7 @@ import { UpdateProductVariantDto } from './dto/update-product-variant.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductVariant } from './entities/product-variant.entity';
 import { Product } from './entities/product.entity';
+import { AvailabilityStatus, ProductStatus } from './entities/product.enums';
 import { ProductsService } from './products.service';
 
 // DTO для nested создания варианта (без productId в body)
@@ -32,10 +34,24 @@ export class ProductsController {
 
   /* ========= PRODUCTS ========= */
 
-  @ApiOperation({ summary: 'Список продуктов' })
+  @ApiOperation({ summary: 'Список продуктов с пагинацией и поиском' })
   @Get()
-  findAll(): Promise<Product[]> {
-    return this.productsService.findAll();
+  findAll(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Query('search') search?: string,
+    @Query('status') status?: ProductStatus,
+    @Query('availability') availability?: AvailabilityStatus,
+    @Query('categoryId') categoryId?: string,
+  ): Promise<{ data: Product[]; total: number }> {
+    return this.productsService.findAllWithPagination(
+      page,
+      limit,
+      search,
+      status,
+      availability,
+      categoryId,
+    );
   }
 
   @ApiOperation({ summary: 'Получить продукт по ID (с вариантами и медиа)' })

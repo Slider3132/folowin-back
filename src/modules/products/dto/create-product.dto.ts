@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsArray,
-  IsBoolean,
+  IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -10,6 +10,7 @@ import {
   IsUUID,
   Min,
 } from 'class-validator';
+import { AvailabilityStatus, ProductStatus } from '../entities/product.enums';
 import { CreateProductVariantDto } from './create-product-variant.dto';
 
 export class CreateProductDto {
@@ -38,10 +39,15 @@ export class CreateProductDto {
   @Min(0)
   orderStep?: number;
 
-  @ApiProperty({ example: true, description: 'Чи активний продукт' })
+  @ApiPropertyOptional({ enum: ProductStatus, description: 'Статус продукту' })
   @IsOptional()
-  @IsBoolean()
-  isActive?: boolean;
+  @IsEnum(ProductStatus)
+  status?: ProductStatus;
+
+  @ApiPropertyOptional({ enum: AvailabilityStatus, description: 'Наявність' })
+  @IsOptional()
+  @IsEnum(AvailabilityStatus)
+  availability?: AvailabilityStatus;
 
   @ApiProperty({ example: 'category-uuid', description: 'ID категорії' })
   @IsUUID()

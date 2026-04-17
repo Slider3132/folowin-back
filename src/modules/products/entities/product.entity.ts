@@ -4,6 +4,7 @@ import { Category } from 'src/modules/categories/entities/category.entity';
 import { Media } from 'src/modules/media/entities/media.entity';
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { ProductVariant } from './product-variant.entity';
+import { AvailabilityStatus, ProductStatus } from './product.enums';
 
 @Entity()
 export class Product extends BaseEntity {
@@ -23,9 +24,21 @@ export class Product extends BaseEntity {
   @JoinColumn({ name: 'category_id' })
   category: Category;
 
-  @ApiProperty()
-  @Column({ default: true })
-  isActive: boolean;
+  @ApiProperty({ enum: ProductStatus })
+  @Column({
+    type: 'enum',
+    enum: ProductStatus,
+    default: ProductStatus.DRAFT,
+  })
+  status: ProductStatus;
+
+  @ApiProperty({ enum: AvailabilityStatus })
+  @Column({
+    type: 'enum',
+    enum: AvailabilityStatus,
+    default: AvailabilityStatus.IN_STOCK,
+  })
+  availability: AvailabilityStatus;
 
   @ApiProperty()
   @Column({ default: 1 })

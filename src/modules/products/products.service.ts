@@ -12,14 +12,15 @@ import { UpdateProductVariantDto } from './dto/update-product-variant.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductVariant } from './entities/product-variant.entity';
 import { Product } from './entities/product.entity';
+import { AvailabilityStatus, ProductStatus } from './entities/product.enums';
 
 @Injectable()
 export class ProductsService {
   constructor(
     @InjectRepository(Product)
-    private readonly productsRepository: Repository<Product>,
+    private readonly productRepository: Repository<Product>,
     @InjectRepository(ProductVariant)
-    private readonly variantsRepository: Repository<ProductVariant>,
+    private readonly variantRepository: Repository<ProductVariant>,
     @InjectRepository(Media)
     private readonly mediaRepository: Repository<Media>,
     private readonly dataSource: DataSource,
@@ -29,15 +30,56 @@ export class ProductsService {
      PRODUCTS
      ======================= */
 
-  async findAll(): Promise<Product[]> {
-    return this.productsRepository.find({
-      relations: ['media', 'variants', 'variants.media'],
-      order: { createdAt: 'DESC' },
-    });
+  async findAllWithPagination(
+    page: number = 1,
+    limit: number = 10,
+    search?: string,
+    status?: ProductStatus,
+    availability?: AvailabilityStatus, // availability enum type
+    categoryId?: string,
+  ): Promise<{ data: Product[]; total: number }> {
+    const skip = (page - 1) * limit;
+    const queryBuilder = this.productRepository.createQueryBuilder('product');
+
+    queryBuilder
+      .leftJoinAndSelect('product.media', 'media')
+      .leftJoinAndSelect('product.variants', 'variants')
+      .leftJoinAndSelect('variants.media', 'variantMedia')
+      .leftJoinAndSelect('product.category', 'category')
+      .orderBy('product.createdAt', 'DESC')
+      .skip(skip)
+      .take(limit);
+
+    if (search) {
+      queryBuilder.andWhere(
+        '(product.name ILIKE :search OR product.sku ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    if (status) {
+      queryBuilder.andWhere('product.status = :status', { status });
+    }
+
+    if (availability) {
+      queryBuilder.andWhere('product.availability = :availability', {
+        availability,
+      });
+    }
+
+    if (categoryId) {
+      queryBuilder.andWhere('product.category.id = :categoryId', {
+        categoryId,
+      });
+    }
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    return { data, total };
   }
 
   async findOne(id: string): Promise<Product> {
-    const product = await this.productsRepository.findOne({
+    const product = await this.productRepository.findOne({
       where: { id },
       relations: ['media', 'variants', 'variants.media'],
     });
@@ -52,6 +94,7 @@ export class ProductsService {
 
       const productToCreate = productsRepo.create({
         ...dto,
+        status: dto.status ?? ProductStatus.DRAFT,
         media: dto.mediaIds
           ? await mediaRepo.find({ where: { id: In(dto.mediaIds) } })
           : [],
@@ -76,6 +119,7 @@ export class ProductsService {
           name: product.name,
           price: 0,
           purchasePrice: 0,
+          stock: 0,
           minOrderQuantity: product.minOrderQuantity ?? 1,
           orderStep: product.orderStep ?? 1,
           isActive: true,
@@ -118,9 +162,9 @@ export class ProductsService {
   }
 
   async remove(id: string): Promise<void> {
-    const product = await this.productsRepository.findOne({ where: { id } });
+    const product = await this.productRepository.findOne({ where: { id } });
     if (!product) throw new NotFoundException('Product not found');
-    await this.productsRepository.softDelete(id);
+    await this.productRepository.softDelete(id);
   }
 
   /* =======================
@@ -128,7 +172,7 @@ export class ProductsService {
      ======================= */
 
   async listVariants(productId: string): Promise<ProductVariant[]> {
-    return this.variantsRepository.find({
+    return this.variantRepository.find({
       where: { productId },
       relations: ['media'],
       order: { createdAt: 'DESC' },
@@ -139,7 +183,7 @@ export class ProductsService {
     productId: string,
     variantId: string,
   ): Promise<ProductVariant> {
-    const variant = await this.variantsRepository.findOne({
+    const variant = await this.variantRepository.findOne({
       where: { id: variantId, productId },
       relations: ['media'],
     });
@@ -189,9 +233,10 @@ export class ProductsService {
       try {
         await variantsRepo.update(variantId, {
           name: dto.name ?? variant.name,
-          sku: dto.sku ?? variant.sku, // может быть null
+          sku: dto.sku ?? variant.sku,
           price: dto.price ?? variant.price,
           purchasePrice: dto.purchasePrice ?? variant.purchasePrice,
+          stock: dto.stock ?? variant.stock,
           attributes: dto.attributes ?? variant.attributes,
           unit: dto.unit ?? variant.unit,
           minOrderQuantity: dto.minOrderQuantity ?? variant.minOrderQuantity,
@@ -229,11 +274,11 @@ export class ProductsService {
   }
 
   async removeVariant(productId: string, variantId: string): Promise<void> {
-    const variant = await this.variantsRepository.findOne({
+    const variant = await this.variantRepository.findOne({
       where: { id: variantId, productId },
     });
     if (!variant) throw new NotFoundException('Variant not found');
-    await this.variantsRepository.softDelete(variantId);
+    await this.variantRepository.softDelete(variantId);
   }
 
   /* =======================
@@ -251,7 +296,7 @@ export class ProductsService {
     const variantToCreate = variantsRepo.create({
       ...dto,
       productId: product.id,
-      // SKU остаётся каким прислали (или null)
+      stock: dto.stock ?? 0,
       minOrderQuantity: dto.minOrderQuantity ?? product.minOrderQuantity ?? 1,
       orderStep: dto.orderStep ?? product.orderStep ?? 1,
       isActive: dto.isActive ?? true,
