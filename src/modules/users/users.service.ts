@@ -13,7 +13,6 @@ export class UsersService {
   async find(id: string, me: boolean = false): Promise<User | User> {
     const user = await this.usersRepository.findOne({
       where: { id },
-      relations: ['stripe'],
     });
 
     if (!user) {
@@ -30,16 +29,20 @@ export class UsersService {
   async update(id: string, dto: UserDto): Promise<User> {
     const user = await this.usersRepository.findOne({
       where: { id },
-      relations: ['conversations'],
+      relations: ['conversations'], // Убедимся, что связь корректна
     });
 
     if (!user) {
       throw new NotFoundException(`User not found`);
     }
 
-    await this.usersRepository.update({ id }, { ...dto });
+    Object.assign(user, dto);
+    await this.usersRepository.save(user);
 
-    return this.usersRepository.findOne({ where: { id } });
+    return this.usersRepository.findOne({
+      where: { id },
+      relations: ['conversations'],
+    });
   }
 
   async delete(id: string): Promise<void> {

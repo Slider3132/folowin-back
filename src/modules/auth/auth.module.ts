@@ -5,6 +5,8 @@ import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { getJWTConfig } from '../../configs/auth/jwt.config';
 import { User } from '../users/entities/user.entity';
+import { UsersModule } from '../users/users.module';
+import { UsersService } from '../users/users.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { VerificationCode } from './entities/verification.entity';
@@ -15,13 +17,13 @@ import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
   imports: [
     TypeOrmModule.forFeature([User, VerificationCode]),
     JwtModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
+      imports: [ConfigModule, UsersModule],
+      inject: [ConfigService, UsersService],
       useFactory: getJWTConfig,
     }),
     PassportModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, RefreshTokenStrategy],
+  providers: [AuthService, JwtStrategy, UsersService, RefreshTokenStrategy],
 })
 export class AuthModule {}

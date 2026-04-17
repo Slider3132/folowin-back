@@ -1,8 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude } from 'class-transformer';
 import { BaseEntity } from 'src/common/entities/base.entity';
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, OneToMany } from 'typeorm';
 import { RolesEnum } from '../enums/roles.enum';
+import { ManagerCustomer } from '@/modules/customers/entities/manager-customer.entity';
 
 class Address {
   @ApiProperty({
@@ -108,4 +109,7 @@ export class User extends BaseEntity {
   })
   @Column({ type: 'varchar', default: 'ua' })
   language?: string | null;
+
+  @OneToMany(() => ManagerCustomer, (mc) => mc.manager)
+  managerCustomers: ManagerCustomer[];
 }

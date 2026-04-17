@@ -29,7 +29,7 @@ async function bootstrap() {
 
   app.useStaticAssets(`${path}/public`, {
     index: false,
-    prefix: '/public/',
+    prefix: '/api/public/',
   });
 
   app.setGlobalPrefix('api');

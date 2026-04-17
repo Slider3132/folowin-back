@@ -31,13 +31,13 @@ import { RefreshAuthGuard } from './guards/refresh-auth.guard';
 import { AuthOKSchema } from './schemas/register.schema';
 import { AuthResponseType } from './types/auth-response.type';
 
-@ApiTags('Authentication')
-@Controller('authentication')
+@ApiTags('Auth')
+@Controller('auth')
 @UseInterceptors(ClassSerializerInterceptor)
 export class AuthController {
   constructor(private readonly service: AuthService) {}
 
-  @Post('register')
+  @Post('sign-up')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({
     description: 'Success',
@@ -51,16 +51,6 @@ export class AuthController {
     return this.service.register(dto);
   }
 
-  @Post('facebook')
-  @HttpCode(HttpStatus.OK)
-  @ApiOkResponse({
-    description: 'Success',
-    schema: AuthOKSchema,
-  })
-  @ApiUnauthorizedResponse({
-    description: 'Invalid credentials',
-    schema: ExceptionSchema,
-  })
   @Post('google')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({
@@ -75,7 +65,7 @@ export class AuthController {
     return this.service.google(dto);
   }
 
-  @Post('login')
+  @Post('sign-in')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({
     description: 'Success',
